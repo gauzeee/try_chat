@@ -1,0 +1,36 @@
+body {
+    box-sizing: border-box;
+}
+
+.wrapper {
+    display: flex;
+    justify-content: space-around;
+    height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.chat {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    //padding-bottom: 50px;
+    width: 70%;
+}
+
+.rooms {
+    width: 30%;
+}
+
+.form-wrapper {
+    position: relative;
+    padding-bottom: 50px;
+}
+
+#typing {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 50px;
+    line-height: 50px;
+}

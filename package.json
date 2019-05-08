@@ -1,0 +1,30 @@
+{
+  "name": "chat",
+  "version": "1.0.0",
+  "description": "simple chat on socket.io test",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "nodemon server.js"
+  },
+  "author": "RunToZ",
+  "license": "ISC",
+  "devDependencies": {
+    "babel-core": "^6.26.3",
+    "ejs": "^2.6.1",
+    "express": "^4.16.4",
+    "http": "0.0.0",
+    "mongodb": "^3.2.3",
+    "node-fetch": "^2.3.0",
+    "nodemon": "^1.18.11",
+    "socket.io": "^2.2.0",
+    "webpack": "^4.29.6",
+    "webpack-cli": "^3.3.0"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "json-server": "^0.14.2",
+    "multer": "^1.4.1",
+    "path": "^0.12.7"
+  }
+}
