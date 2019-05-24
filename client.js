@@ -9,8 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const typing = chat.querySelector('#typing');
     const title = chat.querySelector('h1');
     const usersList = document.getElementById('users-list');
+    const roomsList = document.getElementById('rooms-list');
     let stopTyping = true;
     let timer = null;
+    let allUsers = [];
+    let allRooms = [];
 
 
     title.innerText = 'Hello, ' + username;
@@ -49,22 +52,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
 
-    socket.on('join', function (users) {
-      refreshUsersList(users);
-      addMessage({name: users[users.length-1].username, message: "has joined room..."})
+    socket.on('join', function (user, allUsers) {
+      refreshUsersList(allUsers);
+      addMessage({name: "System", message: `${capitalize(user.name)} has joined room...`})
     });
 
-    socket.on('left', function (data) {
-        let leftedUser, onLine;
-        data.users.forEach(user => {
-          if(user.id === data.id) {
-              leftedUser = user;
-          }  else {
-              onLine.push(user);
-          }
-        });
-        addMessage({name: leftedUser.username, message: "has leaved the room..."});
-       refreshUsersList(onLine);
+    socket.on('left', function ({users, leftUser}) {
+        addMessage({name: "System", message: `${capitalize(leftUser.name)} has leaved the room...`});
+       refreshUsersList(users);
+    });
+
+    socket.on('new room', function (users) {
+        refreshRoomsList(users[username.toLowerCase()].rooms);
+        try {
+            socket.join(user.rooms[user.rooms.length - 1]);
+        } catch   {
+            console.warn("No rooms");
+        }
     });
 
     socket.on('disconnected', function () {
@@ -72,8 +76,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 
-    socket.on('connected', function (arr) {
-        console.log(arr);
+    socket.on('connected', function (users, rooms) {
+        // allUsers = users;
+        // allRooms = rooms;
+        refreshUsersList(users);
+        refreshRoomsList(rooms);
     });
 
     socket.on('message', function (data) {
@@ -94,13 +101,31 @@ document.addEventListener('DOMContentLoaded', function() {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
+    function refreshRoomsList(rooms) {
+        roomsList.innerHTML = '';
+        rooms.forEach(room => {
+            const newRoom = document.createElement('li');
+            newRoom.innerText = room;
+            roomsList.append(newRoom);
+        })
+    }
+
     function refreshUsersList(users) {
         usersList.innerHTML = '';
-        users.forEach((user) => {
+       for (let user in users) {
             const newUser = document.createElement('li');
-            newUser.innerText = user.username;
+            users[user].link = newUser;
+            newUser.innerText = capitalize(users[user].name);
+            if(users[user].online) {
+                newUser.style.color = 'green';
+                users[user].link.addEventListener('click', function(e) {
+                    socket.emit('create room', users[user]);
+                });
+            } else {
+                newUser.style.color = 'red';
+            }
             usersList.append(newUser);
-        })
+        }
     }
 
     function addMessage(data) {

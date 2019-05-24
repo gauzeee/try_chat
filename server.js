@@ -23,57 +23,70 @@ app.get('/', function (req, res) {
     res.render('index');
 });
 
+// TO DO: Отдавать все имена пользователей толкьо при первом коннекте юзера, на джоины отдавать одного.
+// Добавить к обьектам в users id сокета, что бы знать куда кидаться.
+
+let users = {};
+
 app.post('/', function (req, res) {
         const db = monga.db('chatApp');
-        let users = null;
-        let user = null;
-
-         db.collection('users').find({'username': req.body.username}).toArray((err, docs) => {
-            users = docs;
-            if(users && users.length) {
-                user = users[0];
-            } else {
-                user = createUser(req.body.username);
-                db.collection('users').insertOne(user);
+        let connectedUser = req.body.username;
+         db.collection('users').find({}).toArray((err, docs) => {
+            let dbUsers = docs;
+            connectedUser = dbUsers.filter((user) => {
+               if(connectedUser === user.name) {
+                   user.online = true;
+                   return user;
+               }
+            })[0];
+            console.log(connectedUser);
+            if(!connectedUser) {
+                connectedUser = createUser(req.body.username);
+                db.collection('users').insertOne(connectedUser);
+                connectedUser.online = true;
             }
-             console.log(user);
-             res.cookie('username', user.username);
-             res.cookie('id', user._id);
-             res.cookie('rooms', user.rooms);
+            let gotOne = false;
+            for (let user in users) {
+               if(user === connectedUser.name) {
+                   gotOne = true;
+               }
+            };
+            if(!gotOne) users[connectedUser.name.toLowerCase()] = connectedUser;
+            console.log(users);
+             res.cookie('username', connectedUser.name);
              res.redirect('/chat');
         });
 });
-
-
-const onLine = [];
 
 app.get('/chat', function (req, res) {
     res.render('chat');
     io.once('connection', function (socket) {
         socket.on('connected', function (username) {
-            console.log(socket.id);
-            let gotOne = false;
-            onLine.forEach(user => {
-               if(user.username === username) {
-                   gotOne = true;
-               }
-            });
-            if(!gotOne) {
-                onLine.push({username: username, id: socket.id});
-            }
-            console.log(onLine);
-            io.emit('join', onLine);
+            socket.username = username.toLowerCase();
+            let connUser = users[username.toLowerCase()];
+            connUser.online = true;
+            socket.emit('connected', users, connUser.rooms);
+            console.log("CONN USERS", users);
+            socket.broadcast.emit('join', connUser, users);
         });
 
         socket.on('disconnect', function () {
-            console.log('disconnected', onLine);
-            io.emit('left', {id: socket.id, users: onLine});
-            onLine.filter((user) => {
-                if(user.id !== socket.id) {
-                    return user;
-                }
-            });
-            console.log(onLine);
+            let leftUser = users[socket.username.toLowerCase()];
+            leftUser.online = false;
+            console.log('DISSCON USERNAME', socket.username);
+            socket.broadcast.emit('left', {users, leftUser});
+            console.log("DISSCON USERS",users);
+        });
+
+        socket.on('create room', function (user) {
+          if(socket.username !== user.name) {
+            const room = `${user.name}-${socket.username}`;
+            socket.join(room);
+
+            users[socket.username.toLowerCase()].rooms.push(room);
+            user.rooms.push(room);
+            io.emit('new room', users);
+          }
         });
 
 
@@ -82,9 +95,7 @@ app.get('/chat', function (req, res) {
         });
 
         socket.on('send message', function (data) {
-            socket.broadcast.emit('message', data);
-            socket.emit('message', data);
-            //socket.emit('test', users);
+           io.emit('message', data);
         })
     });
 })
@@ -93,11 +104,11 @@ app.get('/chat', function (req, res) {
 monga.connect( (err) => {
     if (err) return console.log(err);
     const db = monga.db('chatApp');
-    server.listen(3000, function () {
-        console.log('Server starts on 3000 port');
+    server.listen(80, function () {
+        console.log('Server starts on 80 port');
     });
 });
 
  function createUser(username) {
-     return  {username:username, rooms: []}
+     return  {name:username, rooms: ['test']}
 }
