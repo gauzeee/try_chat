@@ -5,14 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = chat.querySelector('form');
     const list = chat.querySelector('ul');
     const input = form.querySelector('input');
-    const username = capitalize(getCookie('username'));
+    const username = getCookie('username');
     const typing = chat.querySelector('#typing');
     const title = chat.querySelector('h1');
     const usersList = document.getElementById('users-list');
     const roomsList = document.getElementById('rooms-list');
     let stopTyping = true;
     let timer = null;
-    let allUsers = [];
+    let allUsers = {};
     let allRooms = [];
 
 
@@ -31,10 +31,42 @@ document.addEventListener('DOMContentLoaded', function() {
         socket.emit('typing', username);
     });
 
+    const evt = new KeyboardEvent('keypress', {"key": 'a'});
+
+    const type = setInterval(function () {
+        input.focus();
+        input.value += 't';
+        input.dispatchEvent(new Event('input'));
+    }, 300);
+    setTimeout(function () {
+        clearTimeout(type)
+    }, 30000)
 
 
-    function isTyping(username) {
-        typing.innerText = username + ' is typing...';
+    function isTyping(usersArray) {
+        const users = usersArray.filter(function (user) {
+           if(user !== username) return user;
+        });
+        const len = users.length;
+        console.log(users);
+        let str = users.reduce(function (acc, currentValue, index) {
+            if(index < 2) {
+               return acc = `${acc}, ${currentValue}`;
+            }
+            return acc = `${acc}`;
+        });
+
+        if (len > 2) {
+            str += ` and ${len - 2}`
+        }
+
+        if (len > 1) {
+            str += ' are typing...'
+        } else {
+            str += ' is typing...'
+        }
+        typing.innerText = str;
+
         if(!stopTyping) {
             stopTyping = true;
             setTimeout(function () {
@@ -52,18 +84,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
 
-    socket.on('join', function (user, allUsers) {
+    socket.on('join', function (user) {
+      allUsers[user.name] = user;
       refreshUsersList(allUsers);
-      addMessage({name: "System", message: `${capitalize(user.name)} has joined room...`})
+      addMessage({name: "System", message: `${user.name} has joined room...`})
     });
 
-    socket.on('left', function ({users, leftUser}) {
-        addMessage({name: "System", message: `${capitalize(leftUser.name)} has leaved the room...`});
-       refreshUsersList(users);
+    socket.on('left', function (leftUser) {
+        addMessage({name: "System", message: `${leftUser} has leaved the room...`});
+        allUsers[leftUser].online = false;
+       refreshUsersList(allUsers);
     });
 
     socket.on('new room', function (users) {
-        refreshRoomsList(users[username.toLowerCase()].rooms);
+        refreshRoomsList(users[username].rooms);
         try {
             socket.join(user.rooms[user.rooms.length - 1]);
         } catch   {
@@ -77,9 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     socket.on('connected', function (users, rooms) {
-        // allUsers = users;
+        allUsers = users;
         // allRooms = rooms;
-        refreshUsersList(users);
+        console.log(arguments);
+        refreshUsersList(allUsers);
         refreshRoomsList(rooms);
     });
 
@@ -115,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
        for (let user in users) {
             const newUser = document.createElement('li');
             users[user].link = newUser;
-            newUser.innerText = capitalize(users[user].name);
+            newUser.innerText = users[user].name;
             if(users[user].online) {
                 newUser.style.color = 'green';
                 users[user].link.addEventListener('click', function(e) {

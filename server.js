@@ -8,7 +8,8 @@ const fetch = require("node-fetch");
 const mongoClient = require('mongodb').MongoClient;
 const dbUrl = 'mongodb://localhost:27017';
 const monga = new mongoClient(dbUrl);
-
+let db;
+let typers = [];
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
@@ -21,61 +22,87 @@ app.set('view engine', 'html');
 
 app.get('/', function (req, res) {
     res.render('index');
+    db = monga.db('chatApp');
 });
 
 // TO DO: Отдавать все имена пользователей толкьо при первом коннекте юзера, на джоины отдавать одного.
 // Добавить к обьектам в users id сокета, что бы знать куда кидаться.
 
-let users = {};
+app.post('/', async function (req, res) {
+        let connectedUserName = req.body.username.toLowerCase().trim();
+        console.log("CONNECTED USER", {name: connectedUserName});
+        if(!connectedUserName.length) return;
+    //db.collection('users').deleteMany({});
 
-app.post('/', function (req, res) {
-        const db = monga.db('chatApp');
-        let connectedUser = req.body.username;
-         db.collection('users').find({}).toArray((err, docs) => {
-            let dbUsers = docs;
-            connectedUser = dbUsers.filter((user) => {
-               if(connectedUser === user.name) {
-                   user.online = true;
-                   return user;
-               }
-            })[0];
-            console.log(connectedUser);
+
+         let connectedUser = await db.collection('users').findOne({name: connectedUserName});
+           // .toArray((err, docs) => {
+                // let dbUsers = docs;
+                // connectedUser = dbUsers.filter((user) => {
+                //    if(connectedUser === user.name) {
+                //        user.online = true;
+                //        return user;
+                //    }
+                // })[0];
             if(!connectedUser) {
-                connectedUser = createUser(req.body.username);
-                db.collection('users').insertOne(connectedUser);
-                connectedUser.online = true;
+                connectedUser = createUser(req.body.username.trim());
+                 await db.collection('users').insertOne(connectedUser);
             }
-            let gotOne = false;
-            for (let user in users) {
-               if(user === connectedUser.name) {
-                   gotOne = true;
-               }
-            };
-            if(!gotOne) users[connectedUser.name.toLowerCase()] = connectedUser;
-            console.log(users);
-             res.cookie('username', connectedUser.name);
+            // let gotOne = false;
+            // for (let user in users) {
+            //    if(user === connectedUser.name) {
+            //        gotOne = true;
+            //    }
+            // };
+            // if(!gotOne) users[connectedUser.name] = connectedUser;
+            // console.log(users);
+             db.collection('users').updateOne({name: connectedUser.name}, {$set: {"online": true}}, {upsert: true});
+             console.log('USER IN POST', connectedUser);
+             res.cookie('username', connectedUser.displayedName);
              res.redirect('/chat');
-        });
+
 });
 
-app.get('/chat', function (req, res) {
+app.get('/chat',  function (req, res) {
     res.render('chat');
+
     io.once('connection', function (socket) {
-        socket.on('connected', function (username) {
+        socket.on('connected', async function (username) {
             socket.username = username.toLowerCase();
-            let connUser = users[username.toLowerCase()];
-            connUser.online = true;
-            socket.emit('connected', users, connUser.rooms);
-            console.log("CONN USERS", users);
-            socket.broadcast.emit('join', connUser, users);
+            console.log("USERNAME", username.toLowerCase());
+            let connUser = await db.collection('users').findOneAndUpdate(
+                {"name": socket.username},
+                {$set: {"socketId": socket.id}}
+            );
+            let users = {};
+            await db.collection('users').find({}).toArray((err, docs) => {
+                console.log("tempUsers", docs);
+                docs.forEach(user=> {
+                    console.log("user in each", user);
+                    users[user.name] = {
+                        name: user.displayedName,
+                        online: user.online
+                    }
+                });
+                connUser = connUser.value;
+                socket.userId = connUser._id;
+                delete connUser.socketId;
+                delete connUser._id;
+                console.log("CONN USERS", users, connUser);
+                socket.emit('connected', users, connUser.rooms);
+                socket.broadcast.emit('join', connUser);
+            });
+
+
         });
 
-        socket.on('disconnect', function () {
-            let leftUser = users[socket.username.toLowerCase()];
-            leftUser.online = false;
-            console.log('DISSCON USERNAME', socket.username);
-            socket.broadcast.emit('left', {users, leftUser});
-            console.log("DISSCON USERS",users);
+        socket.on('disconnect', async function () {
+            let leftUser = await db.collection('users').findOneAndUpdate(
+                {"_id": socket.userId},
+                {$set: {"online": false}}
+            );
+            leftUser = leftUser.value;
+            socket.broadcast.emit('left', leftUser.displayedName);
         });
 
         socket.on('create room', function (user) {
@@ -83,15 +110,21 @@ app.get('/chat', function (req, res) {
             const room = `${user.name}-${socket.username}`;
             socket.join(room);
 
-            users[socket.username.toLowerCase()].rooms.push(room);
+            users[socket.username].rooms.push(room);
             user.rooms.push(room);
             io.emit('new room', users);
           }
         });
 
 
+        let clearTypers;
         socket.on('typing', function (username) {
-            socket.broadcast.emit('typing', username);
+            clearTimeout(clearTypers);
+            if (!typers.includes(username)) typers.push(username);
+            socket.broadcast.emit('typing', typers);
+            clearTypers = setTimeout(function () {
+                typers = [];
+            }, 1000)
         });
 
         socket.on('send message', function (data) {
@@ -110,5 +143,5 @@ monga.connect( (err) => {
 });
 
  function createUser(username) {
-     return  {name:username, rooms: ['test']}
+     return  {name:username.toLowerCase(), displayedName: username, rooms: ['test'], online: false, socketId: 'temp'}
 }
