@@ -17,12 +17,25 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(multer.array());
 app.engine('html', require('ejs').renderFile);
-app.set('view engine', 'html');
+app.set('view engine', 'hbs');
 
 
 app.get('/', function (req, res) {
-    res.render('index');
-    db = monga.db('chatApp');
+    res.render('index', {
+        test: "Hello World!"
+    });
+    if(!db) db = monga.db('chatApp');
+});
+
+app.get('/registration', function (req, res) {
+    res.render('reg');
+});
+
+app.post('/registration', function(req, res) {
+    const username = req.body.username;
+    const password = req.body.password;
+    if(!db) db = monga.db('chatApp');
+
 });
 
 // TO DO: Отдавать все имена пользователей толкьо при первом коннекте юзера, на джоины отдавать одного.

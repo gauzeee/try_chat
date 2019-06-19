@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <link rel="stylesheet"  href="/public/css/styles.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            box-sizing: border-box;
+        }
+        .reg-wrapp {
+            display: flex; height: 100vh; justify-content: center; align-items: center;
+        }
+        .reg {
+            margin: auto;
+            width: 320px;
+            padding: 64px 32px;
+            background-color: #efefef;
+            border-radius: 8px;
+        }
+        .reg label {
+            display: block;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .reg input {
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid cornflowerblue;
+            outline: none;
+            display: block;
+            width: calc(100% - 16px);
+            margin: 0 auto 24px auto;
+            padding-left: 16px;
+        }
+        .reg input[type="submit"] {
+            border: none;
+            background-color: cornflowerblue;
+            font-weight: bold;
+            margin-top: 16px;
+            height: 40px;
+            line-height: 40px;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+            cursor: pointer;
+            padding-left: 0;
+        }
+
+        input.red {
+            border-color: tomato;
+        }
+
+        .error-message {
+            margin-bottom: 12px;
+            color: red;
+            font-weight: bold;
+            display: block;
+            text-align: center;
+            width: 100%;
+        }
+        .or-reg {
+            width: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="reg-wrapp">
+    <form action="" method="post" class="reg">
+        <span class="error-message"></span>
+        <label for="username">Login</label>
+        <input name="username" type="text" required>
+        <label for="password">Password</label>
+        <input name="password" type="password" required>
+        <label for="repeat-password">Repeat Password</label>
+        <input name="repeat-password" type="password" required>
+        <input type="submit" value="Sign Up">
+        <div class="or-reg">
+            <a href="/">or Sign In</a>
+        </div>
+    </form>
+</div>
+<script>
+    var repPass = document.querySelector('input[name="repeat-password"]');
+    var pass = document.querySelector('input[name="password"]');
+    var form = document.querySelector('form');
+    var error = document.querySelector('.error-message');
+    var valid = false;
+
+    repPass.addEventListener('input', function() {
+       if(repPass.value !== pass.value) {
+           repPass.classList.add('red');
+           valid = false;
+       } else {
+           repPass.classList.remove('red');
+           valid = true;
+       }
+    });
+    pass.addEventListener('input', function() {
+        if(repPass.value !== pass.value) {
+            valid = false;
+            if(repPass.value.length > 0) {
+                repPass.classList.add('red');
+            }
+        } else {
+            repPass.classList.remove('red');
+            valid = true;
+        }
+    });
+    form.addEventListener('submit', function(e) {
+        if(!valid) {
+            e.preventDefault();
+            error.innerText = "Something wrong, try again";
+        } else {
+            error.innerText = '';
+            form.submit();
+        }
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+    <link rel="stylesheet" type="text/css" href="/public/css/styles.css">
+    <style>
+        body {
+            font-family: sans-serif;
+            box-sizing: border-box;
+        }
+        .reg-wrapp {
+            display: flex; height: 100vh; justify-content: center; align-items: center;
+        }
+        .reg {
+            margin: auto;
+            width: 320px;
+            padding: 64px 32px;
+            background-color: #efefef;
+            border-radius: 8px;
+
+        }
+        .reg label {
+            display: block;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .reg input {
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid cornflowerblue;
+            outline: none;
+            display: block;
+            width: calc(100% - 16px);
+            margin: 0 auto 24px auto;
+            padding-left: 16px;
+        }
+        .reg input[type="submit"] {
+            border: none;
+            background-color: cornflowerblue;
+            font-weight: bold;
+            margin-top: 16px;
+            height: 40px;
+            line-height: 40px;
+            width: 50%;
+            margin-left: auto;
+            margin-right: auto;
+            cursor: pointer;
+            padding-left: 0;
+        }
+        .or-reg {
+            width: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>{{test}}</h2>
+   <div class="reg-wrapp">
+       <form action="" method="post" class="reg">
+           <label for="username">Login</label>
+           <input name="username" type="text">
+           <label for="password">Password</label>
+           <input name="password" type="password">
+           <input type="submit" value="Sign In">
+           <div class="or-reg">
+               <a href="/registration">or Sign Up</a>
+           </div>
+       </form>
+   </div>
+
+</body>
+</html>
