@@ -90,6 +90,8 @@
     var error = document.querySelector('.error-message');
     var valid = false;
 
+    repPass.setAttribute('disabled', 'true');
+
     repPass.addEventListener('input', function() {
        if(repPass.value !== pass.value) {
            repPass.classList.add('red');
@@ -100,6 +102,7 @@
        }
     });
     pass.addEventListener('input', function() {
+        error.innerText = validate(pass.value);
         if(repPass.value !== pass.value) {
             valid = false;
             if(repPass.value.length > 0) {
@@ -110,15 +113,35 @@
             valid = true;
         }
     });
+
+    pass.addEventListener('blur', function () {
+       if(pass.length < 8 || !valid) {
+           error.innerText = 'Password must be at least 8 characters';
+           repPass.setAttribute('disabled', 'true');
+       }
+       repPass.removeAttribute('disabled');
+        error.innerText = '';
+    });
+
     form.addEventListener('submit', function(e) {
         if(!valid) {
             e.preventDefault();
-            error.innerText = "Something wrong, try again";
+            error.innerText = "Passwords didn`t match";
         } else {
             error.innerText = '';
             form.submit();
         }
-    })
+    });
+
+    function validate(string) {
+        if(string.match(/[А-Я]/i)) {
+            return "Password can not contains kyrrilic";
+        } else if(string.match(' ')) {
+            return "Password can not contains spaces, use '_'";
+        }
+       return '';
+    }
+
 </script>
 </body>
 </html>

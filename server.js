@@ -8,6 +8,8 @@ const fetch = require("node-fetch");
 const mongoClient = require('mongodb').MongoClient;
 const dbUrl = 'mongodb://localhost:27017';
 const monga = new mongoClient(dbUrl);
+const CryptoJs = require('crypto-js');
+const salt = 'mYtesTsA1t';
 let db;
 let typers = [];
 
@@ -19,61 +21,53 @@ app.use(multer.array());
 app.engine('html', require('ejs').renderFile);
 app.set('view engine', 'hbs');
 
-
-app.get('/', function (req, res) {
-    res.render('index', {
-        test: "Hello World!"
-    });
-    if(!db) db = monga.db('chatApp');
-});
-
-app.get('/registration', function (req, res) {
-    res.render('reg');
-});
-
-app.post('/registration', function(req, res) {
-    const username = req.body.username;
-    const password = req.body.password;
-    if(!db) db = monga.db('chatApp');
-
-});
-
-// TO DO: Отдавать все имена пользователей толкьо при первом коннекте юзера, на джоины отдавать одного.
-// Добавить к обьектам в users id сокета, что бы знать куда кидаться.
-
-app.post('/', async function (req, res) {
+app.route('/')
+    .get( function (req, res) {
+        res.render('index', {
+            test: "Hello World!"
+        });
+        if(!db) db = monga.db('chatApp');
+    })
+    .post(async function (req, res) {
         let connectedUserName = req.body.username.toLowerCase().trim();
-        console.log("CONNECTED USER", {name: connectedUserName});
+        const pass = req.body.password.trim();
+        const encrypted = CryptoJs.AES.encrypt(pass, salt);
+        const decrypted = CryptoJs.AES.decrypt(encrypted, salt);
+        console.log(pass, encrypted);
+        console.log(decrypted.toString(CryptoJs.enc.Utf8));
+        //console.log("CONNECTED USER", {name: connectedUserName});
         if(!connectedUserName.length) return;
-    //db.collection('users').deleteMany({});
+        //db.collection('users').deleteMany({});
 
 
-         let connectedUser = await db.collection('users').findOne({name: connectedUserName});
-           // .toArray((err, docs) => {
-                // let dbUsers = docs;
-                // connectedUser = dbUsers.filter((user) => {
-                //    if(connectedUser === user.name) {
-                //        user.online = true;
-                //        return user;
-                //    }
-                // })[0];
-            if(!connectedUser) {
-                connectedUser = createUser(req.body.username.trim());
-                 await db.collection('users').insertOne(connectedUser);
-            }
-            // let gotOne = false;
-            // for (let user in users) {
-            //    if(user === connectedUser.name) {
-            //        gotOne = true;
-            //    }
-            // };
-            // if(!gotOne) users[connectedUser.name] = connectedUser;
-            // console.log(users);
-             db.collection('users').updateOne({name: connectedUser.name}, {$set: {"online": true}}, {upsert: true});
-             console.log('USER IN POST', connectedUser);
-             res.cookie('username', connectedUser.displayedName);
-             res.redirect('/chat');
+        let connectedUser = await db.collection('users').findOne({name: connectedUserName});
+        if(!connectedUser) {
+            connectedUser = createUser(req.body.username.trim());
+            await db.collection('users').insertOne(connectedUser);
+        }
+        db.collection('users').updateOne({name: connectedUser.name}, {$set: {"online": true}}, {upsert: true});
+        //console.log('USER IN POST', connectedUser);
+        res.cookie('username', connectedUser.displayedName);
+        //res.redirect('/chat');
+    });
 
+app.route('/registration')
+    .get(function (req, res) {
+        res.render('reg');
+    })
+    .post(function(req, res) {
+        const username = req.body.username;
+        const password = req.body.password;
+        if(!db) db = monga.db('chatApp');
+    });
+
+app.get('/users/*', function (req, res) {
+    //console.log(req.url);
+    let username = req.url.slice(1,req.url.length);
+    username = username.slice(username.indexOf('/') + 1, username.length);
+    res.render('user', {
+        test: username
+    })
 });
 
 app.get('/chat',  function (req, res) {
@@ -82,7 +76,7 @@ app.get('/chat',  function (req, res) {
     io.once('connection', function (socket) {
         socket.on('connected', async function (username) {
             socket.username = username.toLowerCase();
-            console.log("USERNAME", username.toLowerCase());
+            //console.log("USERNAME", username.toLowerCase());
             let connUser = await db.collection('users').findOneAndUpdate(
                 {"name": socket.username},
                 {$set: {"socketId": socket.id}}
@@ -91,7 +85,7 @@ app.get('/chat',  function (req, res) {
             await db.collection('users').find({}).toArray((err, docs) => {
                 console.log("tempUsers", docs);
                 docs.forEach(user=> {
-                    console.log("user in each", user);
+                    //console.log("user in each", user);
                     users[user.name] = {
                         name: user.displayedName,
                         online: user.online
@@ -101,7 +95,7 @@ app.get('/chat',  function (req, res) {
                 socket.userId = connUser._id;
                 delete connUser.socketId;
                 delete connUser._id;
-                console.log("CONN USERS", users, connUser);
+                //console.log("CONN USERS", users, connUser);
                 socket.emit('connected', users, connUser.rooms);
                 socket.broadcast.emit('join', connUser);
             });
