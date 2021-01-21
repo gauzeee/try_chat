@@ -18,7 +18,7 @@
     "mongodb": "^3.2.3",
     "node-fetch": "^2.3.0",
     "nodemon": "^1.18.11",
-    "socket.io": "^2.2.0",
+    "socket.io": "^2.4.0",
     "webpack": "^4.29.6",
     "webpack-cli": "^3.3.0"
   },
